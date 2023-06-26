@@ -1,0 +1,31 @@
+---
+title: "Lab 4: PCA and Clustering"
+author: "Insert your name here"
+date: "Insert date here"
+format: pdf
+---
+
+# Packages
+
+```{r load-packages}
+# load packages here
+```
+
+# Data  
+
+```{r load-data}
+# load data here
+```
+
+
+# Data Wrangling
+
+## Q1 
+
+```{r chunk-name-here}
+# code here
+```
+
+# PCA
+
+# Clustering
