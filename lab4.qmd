@@ -1,7 +1,7 @@
 ---
 title: "Lab 4: PCA and Clustering"
-author: "Insert your name here"
-date: "Insert date here"
+author: "Kaori Hirano"
+date: "6/29/23"
 format: pdf
 ---
 
@@ -17,7 +17,7 @@ suppressPackageStartupMessages(library(readr))
 
 ```{r load-data}
 # load data here
-d <- load("data/vendor_data.RData")
+load("data/vendor_data.RData")
 ```
 
 
@@ -31,8 +31,12 @@ the example code, plays a key role in PCA in particular). Let’s replace this v
 NA.
 2. Use the cut_number() function on the income variable to create a 10-level version of
 this variable. Call this hh_income_cat10
-```{r chunk-name-here}
-# code here
+```{r q1}
+vendor_data$houses[vendor_data$houses == 80000] <- NA # replaces likely mistake with NA
+
+# summary(vendor_data$houses) checks if works
+??cut_number
+vendor_data$hh_income_cat10 <- cut_number(vendor_data$hh_income_trim_99, 10) # cuts income into 10 groups
 ```
 
 # PCA
