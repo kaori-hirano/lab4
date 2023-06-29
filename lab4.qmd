@@ -11,6 +11,11 @@ format: pdf
 # load packages here
 suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(readr))
+library(ISLR2)
+library(broom) # for tidy function
+library(patchwork) # for plot placement
+library(ggdendro) # for dendrograms
+library(mdsr) # for later examples
 ```
 
 # Data  
@@ -35,7 +40,6 @@ this variable. Call this hh_income_cat10
 vendor_data$houses[vendor_data$houses == 80000] <- NA # replaces likely mistake with NA
 
 # summary(vendor_data$houses) checks if works
-??cut_number
 vendor_data$hh_income_cat10 <- cut_number(vendor_data$hh_income_trim_99, 10) # cuts income into 10 groups
 ```
 
@@ -43,17 +47,90 @@ vendor_data$hh_income_cat10 <- cut_number(vendor_data$hh_income_trim_99, 10) # c
 ### Q2
 What are the mean and variance of the possessions variables? Does it seem like we should
 scale them before doing PCA?
+```{r q2}
+# prints means and variances for all posession variables
+cbind(mean(vendor_data$houses, na.rm = TRUE), var(vendor_data$houses, na.rm= TRUE))
+
+cbind(mean(vendor_data$acres_farmland, na.rm = TRUE), var(vendor_data$acres_farmland, na.rm= TRUE))
+
+cbind(mean(vendor_data$bicycles, na.rm = TRUE), var(vendor_data$bicycles, na.rm= TRUE))
+
+cbind(mean(vendor_data$chickens, na.rm = TRUE), var(vendor_data$chickens, na.rm= TRUE))
+
+cbind(mean(vendor_data$goats, na.rm = TRUE), var(vendor_data$goats, na.rm= TRUE))
+
+cbind(mean(vendor_data$basic_cell_phones, na.rm = TRUE), var(vendor_data$basic_cell_phones, na.rm= TRUE))
+
+cbind(mean(vendor_data$smart_phones, na.rm = TRUE), var(vendor_data$smart_phones, na.rm= TRUE))
+
+
+# drops all nas for simplicity's sake
+vdrm <- drop_na(vendor_data)
+apply(vdrm[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
+                                # because first column is character column
+apply(vdrm[, 12:18], 2, var)
+```
+NEEDS INTERPRETATIONS WITH SHOULD WE REDO THE VARIANCE OR WHATEVS
 
 ### Q3
 Use the prcomp() function to do PCA. Create two scree plots like the ones in Figure 12.3 of
 the textbook. Is there an elbow? How many components does it seem are sufficient?
+```{r q3}
+pr_vd <- prcomp(vdrm[, 12:18], scale = TRUE) 
+# pr_vd
+
+comp_vd <- pr_vd$x %>% 
+  as_tibble()
+
+pve_vd <- tibble(component = 1:ncol(comp_vd),
+              var = pr_vd$sdev^2,
+              pve = var/sum(var),
+              cumulative = cumsum(pve))
+
+#summary(pr_out)$importance[2, ]
+
+## cumulative pve
+#summary(pr_out)$importance[3, ]
 
 
+pve_vd_plot <- ggplot(pve_vd) +
+  geom_point(aes(x = component,
+                 y = pve),
+             color = "blue",
+             shape = 1) +
+  geom_line(aes(x = component,
+                y = pve), 
+            color = "blue") +
+  labs(x = "Principal Component",
+       y = "Proportion of Variance Explained") +
+  theme_classic()
+
+cpve_vd_plot <- ggplot(pve_vd) +
+  geom_point(aes(x = component,
+                 y = cumulative),
+             color = "brown3") +
+  geom_line(aes(x = component,
+                y = cumulative),
+             color = "brown3") +
+  labs(x = "Principal Component",
+       y = "Cumulative Proportion of Variance Explained") +
+  ylim(c(0, 1)) +
+  theme_classic()  
+
+# using patchwork package again
+pve_vd_plot + cpve_vd_plot
+```
+There is an elbow. 3 components seems to be sufficient. 
 
 ### Q4
 Plot each of these components (the optimal number based on Q3) against household income.
 Arrange the plots using the patchwork package as demonstrated in this module’s example
 code. Which component(s) seem to proxy for income, if any?
+```{r q4}
+
+
+
+```
 
 
 # Clustering
@@ -67,8 +144,28 @@ Then do the following:
 and the 10 clusters (such as a cross tab or mosaic plot).
 Finally, report on how well the clustering worked to approximate income groups. Put the 10
 clusters into order from least wealthy to most wealth and explain why you chose that order.
+```{r q5-set-up}
+#sets seed
+set.seed(67)
 
+# subsets so only numerical possessive are included
+vd_pos <- vdrm[, 12:18]
 
+# k means
+km_out <- kmeans(vd_pos, 10, nstart = 30)
+```
+
+```{r q5-p1}
+
+```
+
+```{r q5-p2}
+
+```
+
+```{r q5-p3}
+
+```
 ### Q6
 Repeat the previous, but this time use hierarchical clustering with average linkage. Cut the
 tree a 10 clusters. Answer the same three questions.
@@ -77,3 +174,19 @@ the clusters created using 𝐾-means?
 Note: If focusing on prediction, we could use cross-validation to try to see which linkage
 approach works best, as the section on clustering in ISLR points out. We’ll talk more about
 that during the homework for this module
+
+```{r q6-set-up}
+
+```
+
+```{r q6-p1}
+
+```
+
+```{r q6-p2}
+
+```
+
+```{r q6-p3}
+
+```
