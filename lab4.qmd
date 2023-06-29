@@ -9,23 +9,67 @@ format: pdf
 
 ```{r load-packages}
 # load packages here
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(readr))
 ```
 
 # Data  
 
 ```{r load-data}
 # load data here
+d <- load("data/vendor_data.RData")
 ```
 
 
 # Data Wrangling
 
 ## Q1 
-
+First, let’s fix a small issue and create a new, categorical version of income.
+1. One particular respondent reported owning 80,000 houses. This is most likely untrue
+(and seriously affects the standard deviation, which, as you know from the reading and
+the example code, plays a key role in PCA in particular). Let’s replace this value with
+NA.
+2. Use the cut_number() function on the income variable to create a 10-level version of
+this variable. Call this hh_income_cat10
 ```{r chunk-name-here}
 # code here
 ```
 
 # PCA
+### Q2
+What are the mean and variance of the possessions variables? Does it seem like we should
+scale them before doing PCA?
+
+### Q3
+Use the prcomp() function to do PCA. Create two scree plots like the ones in Figure 12.3 of
+the textbook. Is there an elbow? How many components does it seem are sufficient?
+
+
+
+### Q4
+Plot each of these components (the optimal number based on Q3) against household income.
+Arrange the plots using the patchwork package as demonstrated in this module’s example
+code. Which component(s) seem to proxy for income, if any?
+
 
 # Clustering
+### Q5
+Use kmeans() with 𝐾 = 10. Set the seed to 67 beforehand and use 30 different starting
+points.
+Then do the following:
+1. Report the average possession variables in each of the ten groups.
+2. Calculate the average household income within each category.
+3. Visualize or show in some way the concordance between the hh_income_cat10 variable
+and the 10 clusters (such as a cross tab or mosaic plot).
+Finally, report on how well the clustering worked to approximate income groups. Put the 10
+clusters into order from least wealthy to most wealth and explain why you chose that order.
+
+
+### Q6
+Repeat the previous, but this time use hierarchical clustering with average linkage. Cut the
+tree a 10 clusters. Answer the same three questions.
+Finally: is there any overlap between the clusters created through hierarchical clustering and
+the clusters created using 𝐾-means?
+Note: If focusing on prediction, we could use cross-validation to try to see which linkage
+approach works best, as the section on clustering in ISLR points out. We’ll talk more about
+that during the homework for this module
