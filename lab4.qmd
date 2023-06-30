@@ -62,13 +62,13 @@ cbind(mean(vendor_data$goats, na.rm = TRUE), var(vendor_data$goats, na.rm= TRUE)
 cbind(mean(vendor_data$basic_cell_phones, na.rm = TRUE), var(vendor_data$basic_cell_phones, na.rm= TRUE))
 
 cbind(mean(vendor_data$smart_phones, na.rm = TRUE), var(vendor_data$smart_phones, na.rm= TRUE))
-
+??na.omit
 
 # drops all nas for simplicity's sake
-vdrm <- drop_na(vendor_data)
-apply(vdrm[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
+vd <- na.omit(vendor_data)
+apply(vd[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
                                 # because first column is character column
-apply(vdrm[, 12:18], 2, var)
+apply(vd[, 12:18], 2, var)
 ```
 NEEDS INTERPRETATIONS WITH SHOULD WE REDO THE VARIANCE OR WHATEVS
 
@@ -76,7 +76,7 @@ NEEDS INTERPRETATIONS WITH SHOULD WE REDO THE VARIANCE OR WHATEVS
 Use the prcomp() function to do PCA. Create two scree plots like the ones in Figure 12.3 of
 the textbook. Is there an elbow? How many components does it seem are sufficient?
 ```{r q3}
-pr_vd <- prcomp(vdrm[, 12:18], scale = TRUE) 
+pr_vd <- prcomp(vd[, 12:18], scale = TRUE) 
 # pr_vd
 
 comp_vd <- pr_vd$x %>% 
@@ -149,31 +149,51 @@ clusters into order from least wealthy to most wealth and explain why you chose 
 set.seed(67)
 
 # subsets so only numerical possessive are included
-vd_pos <- vdrm[, 12:18]
+vd_pos <- vd[, 12:18]
 
 # k means
 km_out <- kmeans(vd_pos, 10, nstart = 30)
 ```
 
 1. Report the average possession variables in each of the ten groups.
-```{r q5-p1}
+```{r q5-p1-the-long-way}
 # gets cluster assignment for each point
 (km_clusters <- km_out$cluster)
 
 # need to group by cluster
 vd_pos$cluster <- km_clusters
+vd$cluster_km <- km_clusters
 
-# then compute the avg of cluster by cluster col
+# gets cluster avgs for each possession variable
+houses_km <- with(vd_pos, tapply(houses, cluster, mean))
+af_km <- with(vd_pos, tapply(acres_farmland, cluster, mean))
+bikes_km <- with(vd_pos, tapply(bicycles, cluster, mean))
+chickens_km <- with(vd_pos, tapply(chickens, cluster, mean))
+goats_km <- with(vd_pos, tapply(goats, cluster, mean))
+cell_km <- with(vd_pos, tapply(basic_cell_phones, cluster, mean))
+smart_km <- with(vd_pos, tapply(smart_phones, cluster, mean))
 
+# prints all cluster avgs 
+cbind(houses_km, af_km, bikes_km, chickens_km, goats_km, cell_km, smart_km)
+```
+
+```{r the-short-way}
+km_out$centers
 ```
 2. Calculate the average household income within each category.
 ```{r q5-p2}
-
+# gets hh income mean of each cluster
+cluster_mean <- with(vd, tapply(hh_income_trim_99, cluster_km, mean))
+cluster_mean
 ```
 3. Visualize or show in some way the concordance between the hh_income_cat10 variable
 and the 10 clusters (such as a cross tab or mosaic plot).
 ```{r q5-p3}
-
+# shows the number of instances of a household income by each cluster
+vd %>%
+  group_by(cluster_km, hh_income_cat10) %>%
+  tally() %>%
+  spread(cluster_km, n)
 ```
 ### Q6
 Repeat the previous, but this time use hierarchical clustering with average linkage. Cut the
@@ -188,7 +208,7 @@ that during the homework for this module
 #| warning = FALSE
 
 # gets rid of nas in response
-vendor_data_rm <- drop_na(vendor_data)
+vendor_data_rm <- na.omit(vendor_data)
 # remember not to scale because of instructions
 
 # sets up distances
@@ -207,21 +227,57 @@ table(hc_clusters)
 1. Report the average possession variables in each of the ten groups.
 ```{r q6-p1}
 vd_pos$hc_clusters <- hc_clusters
+vd$hc_clusters <- hc_clusters
 
-(houses <- with(vd_pos, tapply(houses, hc_clusters, mean))
+# gets cluster avgs for each possession variable
+houses_hc <- with(vd_pos, tapply(houses, hc_clusters, mean))
+af_hc <- with(vd_pos, tapply(acres_farmland, hc_clusters, mean))
+bikes_hc <- with(vd_pos, tapply(bicycles, hc_clusters, mean))
+chickens_hc <- with(vd_pos, tapply(chickens, hc_clusters, mean))
+goats_hc <- with(vd_pos, tapply(goats, hc_clusters, mean))
+cell_hc <- with(vd_pos, tapply(basic_cell_phones, hc_clusters, mean))
+smart_hc <- with(vd_pos, tapply(smart_phones, hc_clusters, mean))
+
+# prints all cluster avgs 
+cbind(houses_hc, af_hc, bikes_hc, chickens_hc, goats_hc, cell_hc, smart_hc)
 ```
+
 2. Calculate the average household income within each category.
 ```{r q6-p2}
+#| warnings = false
+# I wasn't sure if categories meant the possession variables or clusters 
+# I think it meant the variables but I added both just in case
+# prints avg household income in each of the clusters
+with(vd, tapply(hh_income_trim_99, hc_clusters, mean))
 
+# prints the avg household income of each of the clusters
+hc_mean <- with(vd, tapply(hh_income_trim_99, hc_clusters, mean))
+hc_mean
+
+# prints avg household income in each of the possession categories
+#houses_hc_avg <- with(vd, tapply(hh_income_trim_99,houses, mean))
+#af_hc_avg <- with(vd, tapply(hh_income_trim_99,acres_farmland, mean))
+##bikes_hc_avg <- with(vd, tapply(hh_income_trim_99,bicycles, mean))
+#chickens_hc_avg <- with(vd, tapply(hh_income_trim_99,chickens, mean))
+#goats_hc_avg <- with(vd, tapply(hh_income_trim_99, goats, mean))
+#cell_hc_avg <- with(vd, tapply(hh_income_trim_99, basic_cell_phones, mean))
+#smart_hc_avg <- with(vd, tapply(hh_income_trim_99, smart_phones, mean))
+# prints all category avgs 
+#cbind(houses_hc_avg, af_hc_avg, bikes_hc_avg, chickens_hc_avg, goats_hc_avg, cell_hc_avg, smart_hc_avg)
 ```
 3. Visualize or show in some way the concordance between the hh_income_cat10 variable
 and the 10 clusters (such as a cross tab or mosaic plot).
 ```{r q6-p3}
-
+# shows the instances of each cluster as the number 
+# of times it shows up in the corresponding hh income level
+vd %>%
+  group_by(hc_clusters, hh_income_cat10) %>%
+  tally() %>%
+  spread(hc_clusters, n)
 ```
-
+#### Q6P4
 4. is there any overlap between the clusters created through hierarchical clustering and
 the clusters created using 𝐾-means?
-```{r q6-p4}
 
-```
+Yes, there is some overlap, but seems mostly because the K-means clustering is so spread out
+that it happens to overlap with some of the data points on the hierarchical clustering.
