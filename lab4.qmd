@@ -16,6 +16,7 @@ library(broom) # for tidy function
 library(patchwork) # for plot placement
 library(ggdendro) # for dendrograms
 library(mdsr) # for later examples
+library(ggplot2)
 ```
 
 # Data  
@@ -66,18 +67,20 @@ cbind(mean(vendor_data$smart_phones, na.rm = TRUE), var(vendor_data$smart_phones
 
 # drops all nas for simplicity's sake
 vd <- na.omit(vendor_data)
-apply(vd[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
+# apply(vd[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
+pr_vd$center 
                                 # because first column is character column
-apply(vd[, 12:18], 2, var)
+# apply(vd[, 12:18], 2, var)
+pr_vd$scale
 ```
-NEEDS INTERPRETATIONS WITH SHOULD WE REDO THE VARIANCE OR WHATEVS
+The mean and variances of the possession variables range from .5-56.7 (variance) and .3 to 4.0 (mean). I think it would make sense to scale them because you can have a lot more chickens than you can phones, so we don't want to give too much influence to one variable that doesn't necessarily warrant it when we want to know about the differences not the overall amount. 
 
 ### Q3
 Use the prcomp() function to do PCA. Create two scree plots like the ones in Figure 12.3 of
 the textbook. Is there an elbow? How many components does it seem are sufficient?
 ```{r q3}
+# pca creation
 pr_vd <- prcomp(vd[, 12:18], scale = TRUE) 
-# pr_vd
 
 comp_vd <- pr_vd$x %>% 
   as_tibble()
@@ -87,12 +90,7 @@ pve_vd <- tibble(component = 1:ncol(comp_vd),
               pve = var/sum(var),
               cumulative = cumsum(pve))
 
-#summary(pr_out)$importance[2, ]
-
-## cumulative pve
-#summary(pr_out)$importance[3, ]
-
-
+#creates plot
 pve_vd_plot <- ggplot(pve_vd) +
   geom_point(aes(x = component,
                  y = pve),
@@ -120,30 +118,105 @@ cpve_vd_plot <- ggplot(pve_vd) +
 # using patchwork package again
 pve_vd_plot + cpve_vd_plot
 ```
-There is an elbow. 3 components seems to be sufficient. 
+
+``` {r scree-but-zoomed-in}
+pr_vd
+# standard deviation of each principal component
+pr_vd$sdev
+# variance explained
+pr_vd$sdev^2
+# proportion of variance explained
+pve <- pr_vd$sdev^2/sum(pr_vd$sdev^2)
+
+# showing PVE and cumulative PVE
+pve <- tibble(component = 1:4,
+              pve = pve,
+              cumulative = cumsum(pve))
+pve
+
+pve_plot <- ggplot(pve_vd) +
+  geom_point(aes(x = component,
+                 y = pve, color = "Individual")) +
+  geom_line(aes(x = component,
+                y = pve, color = "Individual")) +
+  labs(x = "Principal Component",
+       y = "Proportion of Variance Explained") +
+  ylim(c(0, 1)) +
+  theme_classic()
+pve_plot
+
+cpve_plot <- ggplot(pve_vd) +
+  geom_point(aes(x = component,
+                 y = cumulative)) +
+  geom_line(aes(x = component,
+                y = cumulative)) +
+  labs(x = "Principal Component",
+       y = "Cumulative Proportion of Variance Explained") +
+  ylim(c(0, 1)) +
+  theme_classic()  
+cpve_plot
+
+# using patchwork package again
+pve_plot + cpve_plot
+```
+There is an elbow, and it appears to be at the second component. 2 components seems to be sufficient based on this. 
 
 ### Q4
 Plot each of these components (the optimal number based on Q3) against household income.
 Arrange the plots using the patchwork package as demonstrated in this module’s example
 code. Which component(s) seem to proxy for income, if any?
 ```{r q4}
+# comp_vd this has all of the points and the associated component values
+# so we need to extract the exact row that corresponds with the component we care about
+# that was not in the example tho
+# so maybe not
 
+# plots the component values against income
+pca1 <- ggplot(vd, aes(x = comp_vd$PC1, y = hh_income_trim_99)) + 
+ geom_point() +
+  labs(title = 'Household Income by Component 1', x = 'Component Value', y = 'Household Income (Kwacha)')
 
+pca2 <- ggplot(vd, aes(x = comp_vd$PC2, y = hh_income_trim_99)) + 
+ geom_point() +
+ labs(title = 'Household Income by Component 2', x = 'Component Value', y = 'Household Income (Kwacha)')
 
+pca1 + pca2
+
+# these are the side by side plots from the code example
+# define arrow style for plotting
+arrow_style <- arrow(
+  angle = 20, ends = "first", type = "closed", length = grid::unit(8, "pt")
+)
+
+rot <- pr_out %>%
+  tidy(matrix = "rotation") %>%
+  pivot_wider(names_from = "PC", names_prefix = "PC", values_from = "value")
+
+scores <- pr_vd$x %>%
+  as_tibble() %>%  # turn matrix into tibble for ggplot
+  mutate(id = 1:n()) %>% # add ID vector in to identify observations 
+  ggplot(aes(PC1, PC2)) + 
+  geom_text(aes(label = vd$hh_income_trim_99)) +
+  theme_bw()
+
+loadings <- rot %>% 
+  ggplot(aes(PC1, PC2)) +
+  geom_segment(xend = 0, yend = 0, arrow = arrow_style) +
+  geom_text(
+    aes(label = column),
+    hjust = 1, nudge_x = -0.02, 
+    color = "#904C2F"
+  ) +
+  xlim(-1, 1) + ylim(-1, 1) +
+  theme_bw()
+
+scores + loadings
 ```
-
+Smartphones, basic cell phones, and acres of farmland appear to be the closest 
+to income because of the direction and placement of the arrows. 
 
 # Clustering
 ### Q5
-Use kmeans() with 𝐾 = 10. Set the seed to 67 beforehand and use 30 different starting
-points.
-Then do the following:
-1. Report the average possession variables in each of the ten groups.
-2. Calculate the average household income within each category.
-3. Visualize or show in some way the concordance between the hh_income_cat10 variable
-and the 10 clusters (such as a cross tab or mosaic plot).
-Finally, report on how well the clustering worked to approximate income groups. Put the 10
-clusters into order from least wealthy to most wealth and explain why you chose that order.
 ```{r q5-set-up}
 #sets seed
 set.seed(67)
@@ -155,10 +228,10 @@ vd_pos <- vd[, 12:18]
 km_out <- kmeans(vd_pos, 10, nstart = 30)
 ```
 
-1. Report the average possession variables in each of the ten groups.
+#### Q5p1
 ```{r q5-p1-the-long-way}
 # gets cluster assignment for each point
-(km_clusters <- km_out$cluster)
+km_clusters <- km_out$cluster
 
 # need to group by cluster
 vd_pos$cluster <- km_clusters
@@ -174,27 +247,37 @@ cell_km <- with(vd_pos, tapply(basic_cell_phones, cluster, mean))
 smart_km <- with(vd_pos, tapply(smart_phones, cluster, mean))
 
 # prints all cluster avgs 
-cbind(houses_km, af_km, bikes_km, chickens_km, goats_km, cell_km, smart_km)
+# cbind(houses_km, af_km, bikes_km, chickens_km, goats_km, cell_km, smart_km)
 ```
 
 ```{r the-short-way}
+# ptings all cluster avgs
 km_out$centers
 ```
-2. Calculate the average household income within each category.
+#### Q5p2
 ```{r q5-p2}
 # gets hh income mean of each cluster
 cluster_mean <- with(vd, tapply(hh_income_trim_99, cluster_km, mean))
 cluster_mean
 ```
-3. Visualize or show in some way the concordance between the hh_income_cat10 variable
-and the 10 clusters (such as a cross tab or mosaic plot).
+#### Q5p3
 ```{r q5-p3}
 # shows the number of instances of a household income by each cluster
 vd %>%
   group_by(cluster_km, hh_income_cat10) %>%
   tally() %>%
   spread(cluster_km, n)
+
+# maybe this will be easier to rank...
+vd %>%
+  group_by(hh_income_cat10, cluster_km) %>%
+  tally() %>%
+  spread(hh_income_cat10, n)
 ```
+
+The clustering didn't seem to work very well. It was really hard to rank income clusters by income groups because there was so much variation within clusters. I would rank the clusters from 2, 8, 3, 1, 10, 9, 5, 6, 4, 7. I chose this order by trying to balance the number of households in each income bracket, with the ones with the highest proportion of higher income households being in the wealthier positions on the list and the ones with more lower income households on the less wealthy side of the list. 
+
+
 ### Q6
 Repeat the previous, but this time use hierarchical clustering with average linkage. Cut the
 tree a 10 clusters. Answer the same three questions.
@@ -224,7 +307,7 @@ hc_out <- hclust(dist(vendor_data_rm))
 hc_clusters <- cutree(hc_out, 10)
 table(hc_clusters)
 ```
-1. Report the average possession variables in each of the ten groups.
+#### Q5p1
 ```{r q6-p1}
 vd_pos$hc_clusters <- hc_clusters
 vd$hc_clusters <- hc_clusters
@@ -242,7 +325,7 @@ smart_hc <- with(vd_pos, tapply(smart_phones, hc_clusters, mean))
 cbind(houses_hc, af_hc, bikes_hc, chickens_hc, goats_hc, cell_hc, smart_hc)
 ```
 
-2. Calculate the average household income within each category.
+#### Q6p2
 ```{r q6-p2}
 #| warnings = false
 # I wasn't sure if categories meant the possession variables or clusters 
@@ -265,8 +348,7 @@ hc_mean
 # prints all category avgs 
 #cbind(houses_hc_avg, af_hc_avg, bikes_hc_avg, chickens_hc_avg, goats_hc_avg, cell_hc_avg, smart_hc_avg)
 ```
-3. Visualize or show in some way the concordance between the hh_income_cat10 variable
-and the 10 clusters (such as a cross tab or mosaic plot).
+#### Q6p3
 ```{r q6-p3}
 # shows the instances of each cluster as the number 
 # of times it shows up in the corresponding hh income level
@@ -275,9 +357,13 @@ vd %>%
   tally() %>%
   spread(hc_clusters, n)
 ```
+The clustering here seemed to work much much better. There appears to be a much clearer grouping of clusters based on the distribution of income groups included in the clusters. The ranking from least to most wealthy would be 2, 10, 1, 3, 5, 9, 7, 8, 6, 4. This was based on the number of households in each of the categories then by the total number in the specific category because there were a lot in the last one. 
+
+k means order: 2, 8, 3, 1, 10, 9, 5, 6, 4, 7. 
+
 #### Q6P4
 4. is there any overlap between the clusters created through hierarchical clustering and
 the clusters created using 𝐾-means?
 
 Yes, there is some overlap, but seems mostly because the K-means clustering is so spread out
-that it happens to overlap with some of the data points on the hierarchical clustering.
+that it happens to overlap with some of the data points on the hierarchical clustering. In terms of ordering, there was some overlap, with 2 being the lowest and 4/6 being toward the higher end, but overall not a lot because the distribution in the k means was so spread out compared to the hc. 
