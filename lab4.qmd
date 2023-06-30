@@ -67,11 +67,11 @@ cbind(mean(vendor_data$smart_phones, na.rm = TRUE), var(vendor_data$smart_phones
 
 # drops all nas for simplicity's sake
 vd <- na.omit(vendor_data)
-# apply(vd[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
-pr_vd$center 
+ apply(vd[, 12:18], 2, mean) # we need to subset to columns 2 through 5 
+#pr_vd$center 
                                 # because first column is character column
-# apply(vd[, 12:18], 2, var)
-pr_vd$scale
+ apply(vd[, 12:18], 2, var)
+#pr_vd$scale
 ```
 The mean and variances of the possession variables range from .5-56.7 (variance) and .3 to 4.0 (mean). I think it would make sense to scale them because you can have a lot more chickens than you can phones, so we don't want to give too much influence to one variable that doesn't necessarily warrant it when we want to know about the differences not the overall amount. 
 
@@ -128,12 +128,6 @@ pr_vd$sdev^2
 # proportion of variance explained
 pve <- pr_vd$sdev^2/sum(pr_vd$sdev^2)
 
-# showing PVE and cumulative PVE
-pve <- tibble(component = 1:4,
-              pve = pve,
-              cumulative = cumsum(pve))
-pve
-
 pve_plot <- ggplot(pve_vd) +
   geom_point(aes(x = component,
                  y = pve, color = "Individual")) +
@@ -177,7 +171,7 @@ pca1 <- ggplot(vd, aes(x = comp_vd$PC1, y = hh_income_trim_99)) +
   labs(title = 'Household Income by Component 1', x = 'Component Value', y = 'Household Income (Kwacha)')
 
 pca2 <- ggplot(vd, aes(x = comp_vd$PC2, y = hh_income_trim_99)) + 
- geom_point() +
+ geom_point() + 
  labs(title = 'Household Income by Component 2', x = 'Component Value', y = 'Household Income (Kwacha)')
 
 pca1 + pca2
@@ -188,7 +182,7 @@ arrow_style <- arrow(
   angle = 20, ends = "first", type = "closed", length = grid::unit(8, "pt")
 )
 
-rot <- pr_out %>%
+rot <- pr_vd %>%
   tidy(matrix = "rotation") %>%
   pivot_wider(names_from = "PC", names_prefix = "PC", values_from = "value")
 
@@ -327,7 +321,6 @@ cbind(houses_hc, af_hc, bikes_hc, chickens_hc, goats_hc, cell_hc, smart_hc)
 
 #### Q6p2
 ```{r q6-p2}
-#| warnings = false
 # I wasn't sure if categories meant the possession variables or clusters 
 # I think it meant the variables but I added both just in case
 # prints avg household income in each of the clusters
